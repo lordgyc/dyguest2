@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <div class="logo">
+                    <i class="fas fa-utensils"></i>
+                    <span>Guest </span>
+                </div>
+            </div>
+            <div class="header-right">
+                <nav>
+                    <ul>
+                        <li data-tab="home" class="active"><i class="fas fa-home"></i> Home</li>
+                        <li data-tab="add-credit"><i class="fas fa-plus-circle"></i> Add Credit</li>
+                        <li data-tab="credit-management"><i class="fas fa-credit-card"></i> Credit Management</li>
+                        <li data-tab="guest-management"><i class="fas fa-users"></i> Guest Management</li>
+                        <li data-tab="meal-management"><i class="fas fa-hamburger"></i> Meal Management</li>
+                    </ul>
+                </nav>
+                <div class="settings">
+                    <i class="fas fa-cog" id="settings-icon"></i>
+                    <div class="settings-menu" id="settings-menu" style="display: none;">
+                        <div class="theme-option">
+                            <label>
+                                <input type="radio" name="theme" value="light" checked> Light Mode
+                            </label>
+                        </div>
+                        <div class="theme-option">
+                            <label>
+                                <input type="radio" name="theme" value="dark"> Dark Mode
+                            </label>
+                        </div>
+                        <div class="theme-option">
+                            <label>
+                                <input type="radio" name="theme" value="green"> Green Mode
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div class="content-area" id="content">
+                <!-- Tab content will be displayed here -->
+                <div class="tab-content active" id="home">
+                    <h2>Home Dashboard</h2>
+                    <p>Welcome to your meal management system. Select a tab to get started.</p>
+                </div>
+                
+                <div class="tab-content" id="add-credit">
+                    <h2>Add Credit</h2>
+                    
+                    <div class="credit-flow-container">
+                        <!-- Step 1: Select Date -->
+                        <div class="credit-step" id="step-date">
+                            <h3>Step 1: Select Date</h3>
+                            <div class="form-group">
+                                <label for="credit-date">Date for Credit:</label>
+                                <input type="date" id="credit-date" value="" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="primary-btn" id="date-next-btn">
+                                    Next <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Select Guest -->
+                        <div class="credit-step" id="step-guest" style="display: none;">
+                            <h3>Step 2: Select Guest</h3>
+                            
+                            <div class="back-button">
+                                <button type="button" class="text-btn" id="back-to-date">
+                                    <i class="fas fa-arrow-left"></i> Back to Date Selection
+                                </button>
+                            </div>
+                            
+                            <div class="filter-section">
+                                <div class="filter-item">
+                                    <label for="credit-category-filter">Filter by Category:</label>
+                                    <select id="credit-category-filter">
+                                        <option value="all">All Categories</option>
+                                        <!-- Categories will be loaded here -->
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="credit-guest-search">Search:</label>
+                                    <input type="text" id="credit-guest-search" placeholder="Search guests...">
+                                </div>
+                            </div>
+                            
+                            <div class="guests-grid" id="guests-grid">
+                                <!-- Guests will be loaded here -->
+                            </div>
+                            
+                            <div id="no-credit-guests-message" class="empty-message" style="display: none;">
+                                <i class="fas fa-info-circle"></i>
+                                <p>No guests found. Please adjust your search or <a href="#" id="add-new-guest-link">add a new guest</a>.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Select Meals -->
+                        <div class="credit-step" id="step-meals" style="display: none;">
+                            <h3>Step 3: Select Meals</h3>
+                            
+                            <div class="back-button">
+                                <button type="button" class="text-btn" id="back-to-guest">
+                                    <i class="fas fa-arrow-left"></i> Back to Guest Selection
+                                </button>
+                            </div>
+                            
+                            <div class="filter-section">
+                                <div class="filter-item">
+                                    <label for="credit-meal-category-filter">Category:</label>
+                                    <select id="credit-meal-category-filter">
+                                        <option value="all">All Categories</option>
+                                        <!-- Categories will be loaded here -->
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="credit-meal-subcategory-filter">Subcategory:</label>
+                                    <select id="credit-meal-subcategory-filter">
+                                        <option value="all">All Subcategories</option>
+                                        <!-- Subcategories will be loaded here -->
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="credit-meal-search">Search:</label>
+                                    <input type="text" id="credit-meal-search" placeholder="Search meals...">
+                                </div>
+                            </div>
+                            
+                            <div class="selected-meals-summary">
+                                <span><strong>Selected:</strong> <span id="selected-meals-count">0</span> meals</span>
+                                <span><strong>Total:</strong> <span id="selected-meals-total">$0.00</span></span>
+                            </div>
+                            
+                            <div class="meals-grid" id="meals-grid">
+                                <!-- Meals will be loaded here -->
+                            </div>
+                            
+                            <div id="no-credit-meals-message" class="empty-message" style="display: none;">
+                                <i class="fas fa-utensils"></i>
+                                <p>No meals found. Please adjust your search criteria.</p>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="primary-btn" id="complete-credit-btn">
+                                    Complete <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Confirmation -->
+                        <div class="credit-step" id="step-confirm" style="display: none;">
+                            <h3>Step 4: Confirm and Save</h3>
+                            
+                            <div class="back-button">
+                                <button type="button" class="text-btn" id="back-to-meals">
+                                    <i class="fas fa-arrow-left"></i> Back to Meal Selection
+                                </button>
+                            </div>
+                            
+                            <div class="confirmation-summary">
+                                <div class="summary-card">
+                                    <h4>Credit Summary</h4>
+                                    
+                                    <div class="summary-row">
+                                        <span class="summary-label">Date:</span>
+                                        <span id="confirm-date"></span>
+                                    </div>
+                                    
+                                    <div class="summary-row">
+                                        <span class="summary-label">Guest:</span>
+                                        <span id="confirm-guest"></span>
+                                    </div>
+                                    
+                                    <div class="summary-row">
+                                        <span class="summary-label">Meals:</span>
+                                        <div id="confirm-meals-list" class="confirm-meals-list">
+                                            <!-- Selected meals will be listed here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="summary-row total-row">
+                                        <span class="summary-label">Total Amount:</span>
+                                        <span id="confirm-total"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="credit-note">Note (Optional):</label>
+                                    <textarea id="credit-note" placeholder="Add a note for this credit..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="secondary-btn" id="cancel-credit">
+                                    Cancel
+                                </button>
+                                <button type="button" class="primary-btn" id="save-credit-btn">
+                                    Save Credit
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Success Message -->
+                        <div class="credit-step" id="step-success" style="display: none;">
+                            <div class="success-message">
+                                <i class="fas fa-check-circle"></i>
+                                <h3>Credit Added Successfully!</h3>
+                                <p>The credit has been added to the guest's account.</p>
+                                <div class="form-actions">
+                                    <button type="button" class="secondary-btn" id="view-credits-btn">
+                                        View All Credits
+                                    </button>
+                                    <button type="button" class="primary-btn" id="add-another-credit-btn">
+                                        Add Another Credit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="credit-management">
+                    <h2>Credit Management</h2>
+                    
+                    <div class="filter-section">
+                        <div class="filter-item">
+                            <label for="credit-guest-search">Search Guest:</label>
+                            <input type="text" id="credit-guest-search" placeholder="Search guests...">
+                        </div>
+                        <div class="filter-item">
+                            <label for="credit-management-category-filter">Filter by Category:</label>
+                            <select id="credit-management-category-filter">
+                                <option value="all">All Categories</option>
+                                <!-- Categories will be loaded here -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="guest-credits-container">
+                        <!-- This content will be dynamically generated -->
+                        <div class="welcome-message">
+                            <i class="fas fa-credit-card welcome-icon"></i>
+                            <h3>Credit Management</h3>
+                            <p>Search for a guest to view their credit history, or select from the list below.</p>
+                        </div>
+                        
+                        <div class="guest-grid-container">
+                            <h4>Select a Guest</h4>
+                            <div id="credit-management-guests-grid" class="guests-grid">
+                                <!-- Guest cards will be loaded here -->
+                            </div>
+                            <div id="no-guests-credit-management" class="empty-message" style="display: none;">
+                                <i class="fas fa-info-circle"></i>
+                                <p>No guests found. Add guests in the Guest Management tab.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="guest-management">
+                    <h2>Guest Management</h2>
+                    
+                    <div class="action-buttons">
+                        <button id="add-guest-btn" class="primary-btn">
+                            <i class="fas fa-user-plus"></i> Add New Guest
+                        </button>
+                        <button id="manage-categories-btn" class="secondary-btn">
+                            <i class="fas fa-tags"></i> Manage Categories
+                        </button>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <div class="filter-item">
+                            <label for="category-filter">Filter by Category:</label>
+                            <select id="category-filter">
+                                <option value="all">All Categories</option>
+                                <!-- Categories will be loaded here -->
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="guest-search">Search:</label>
+                            <input type="text" id="guest-search" placeholder="Search guests...">
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="guests-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Category</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Guest data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="no-guests-message" class="empty-message" style="display: none;">
+                        <i class="fas fa-info-circle"></i>
+                        <p>No guests found. Add a new guest to get started.</p>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="meal-management">
+                    <h2>Meal Management</h2>
+                    
+                    <div class="action-buttons">
+                        <button id="add-meal-btn" class="primary-btn">
+                            <i class="fas fa-hamburger"></i> Add New Meal
+                        </button>
+                        <button id="manage-meal-categories-btn" class="secondary-btn">
+                            <i class="fas fa-tags"></i> Manage Categories
+                        </button>
+                        <button id="bulk-price-update-btn" class="accent-btn">
+                            <i class="fas fa-money-bill-wave"></i> Bulk Price Update
+                        </button>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <div class="filter-item">
+                            <label for="meal-category-filter">Category:</label>
+                            <select id="meal-category-filter">
+                                <option value="all">All Categories</option>
+                                <!-- Categories will be loaded here -->
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="meal-subcategory-filter">Subcategory:</label>
+                            <select id="meal-subcategory-filter">
+                                <option value="all">All Subcategories</option>
+                                <!-- Subcategories will be loaded here -->
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="meal-search">Search:</label>
+                            <input type="text" id="meal-search" placeholder="Search meals...">
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="meals-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Price</th>
+                                    <th>Category</th>
+                                    <th>Subcategory</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Meal data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="no-meals-message" class="empty-message" style="display: none;">
+                        <i class="fas fa-utensils"></i>
+                        <p>No meals found. Add a new meal to get started.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar" id="sidebar">
+                <h3>Credit Summary</h3>
+                <div class="credit-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Date:</span>
+                        <span id="sidebar-date">Not selected</span>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <span class="summary-label">Guest:</span>
+                        <span id="sidebar-guest">Not selected</span>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <span class="summary-label">Selected Meals:</span>
+                        <div id="sidebar-meals-list">
+                            <p class="empty-selection">No meals selected</p>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item total-section">
+                        <span class="summary-label">Total Amount:</span>
+                        <span id="sidebar-total">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modals -->
+    <!-- Guest Form Modal -->
+    <div class="modal" id="guest-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="guest-modal-title">Add New Guest</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="guest-form">
+                    <input type="hidden" id="guest-id">
+                    <div class="form-group">
+                        <label for="guest-name">Name*</label>
+                        <input type="text" id="guest-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="guest-phone">Phone</label>
+                        <input type="tel" id="guest-phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="guest-email">Email</label>
+                        <input type="email" id="guest-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="guest-address">Address</label>
+                        <textarea id="guest-address"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="guest-category">Category</label>
+                        <select id="guest-category">
+                            <option value="">-- Select Category --</option>
+                            <!-- Categories will be loaded here -->
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="secondary-btn" id="cancel-guest">Cancel</button>
+                        <button type="submit" class="primary-btn">Save Guest</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div class="modal" id="category-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Guest Categories</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="category-form-section">
+                    <h4 id="category-form-title">Add New Category</h4>
+                    <form id="category-form">
+                        <input type="hidden" id="category-id">
+                        <div class="form-group">
+                            <label for="category-name">Name*</label>
+                            <input type="text" id="category-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="category-description">Description</label>
+                            <textarea id="category-description"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="secondary-btn" id="reset-category-form">Reset</button>
+                            <button type="submit" class="primary-btn">Save Category</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="category-list-section">
+                    <h4>Existing Categories</h4>
+                    <div class="table-container">
+                        <table id="categories-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Categories will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="no-categories-message" class="empty-message" style="display: none;">
+                        <i class="fas fa-info-circle"></i>
+                        <p>No categories found. Add a new category using the form.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirm-modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 id="confirm-title">Confirm Action</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message">Are you sure you want to proceed with this action?</p>
+                <div class="form-actions">
+                    <button type="button" class="secondary-btn" id="cancel-confirm">Cancel</button>
+                    <button type="button" class="danger-btn" id="confirm-action">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Messages Container -->
+    <div id="toast-container"></div>
+    
+    <!-- Meal Form Modal -->
+    <div class="modal" id="meal-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="meal-modal-title">Add New Meal</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="meal-form">
+                    <input type="hidden" id="meal-id">
+                    <div class="form-group">
+                        <label for="meal-name">Name*</label>
+                        <input type="text" id="meal-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="meal-description">Description</label>
+                        <textarea id="meal-description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="meal-price">Price*</label>
+                        <div class="price-input-wrapper">
+                            <span class="currency-symbol">$</span>
+                            <input type="number" id="meal-price" min="0" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="meal-category">Category*</label>
+                        <select id="meal-category" required>
+                            <option value="">-- Select Category --</option>
+                            <!-- Categories will be loaded here -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="meal-subcategory">Subcategory</label>
+                        <select id="meal-subcategory">
+                            <option value="">-- Select Subcategory (Optional) --</option>
+                            <!-- Subcategories will be loaded here based on selected category -->
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="secondary-btn" id="cancel-meal">Cancel</button>
+                        <button type="submit" class="primary-btn">Save Meal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meal Category Management Modal -->
+    <div class="modal" id="meal-category-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Meal Categories</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="tabs-container">
+                    <div class="modal-tabs">
+                        <div class="modal-tab active" data-tab="categories">Categories</div>
+                        <div class="modal-tab" data-tab="subcategories">Subcategories</div>
+                    </div>
+                    
+                    <div class="modal-tab-content active" id="categories-tab">
+                        <div class="category-form-section">
+                            <h4 id="meal-category-form-title">Add New Category</h4>
+                            <form id="meal-category-form">
+                                <input type="hidden" id="meal-category-id">
+                                <div class="form-group">
+                                    <label for="meal-category-name">Name*</label>
+                                    <input type="text" id="meal-category-name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="meal-category-description">Description</label>
+                                    <textarea id="meal-category-description"></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" class="secondary-btn" id="reset-meal-category-form">Reset</button>
+                                    <button type="submit" class="primary-btn">Save Category</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="category-list-section">
+                            <h4>Existing Categories</h4>
+                            <div class="table-container">
+                                <table id="meal-categories-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Description</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Categories will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="no-meal-categories-message" class="empty-message" style="display: none;">
+                                <i class="fas fa-info-circle"></i>
+                                <p>No categories found. Add a new category using the form.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-tab-content" id="subcategories-tab">
+                        <div class="category-form-section">
+                            <h4 id="meal-subcategory-form-title">Add New Subcategory</h4>
+                            <form id="meal-subcategory-form">
+                                <input type="hidden" id="meal-subcategory-id">
+                                <div class="form-group">
+                                    <label for="meal-subcategory-name">Name*</label>
+                                    <input type="text" id="meal-subcategory-name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="meal-subcategory-description">Description</label>
+                                    <textarea id="meal-subcategory-description"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="meal-subcategory-parent">Parent Category*</label>
+                                    <select id="meal-subcategory-parent" required>
+                                        <option value="">-- Select Parent Category --</option>
+                                        <!-- Categories will be loaded here -->
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" class="secondary-btn" id="reset-meal-subcategory-form">Reset</button>
+                                    <button type="submit" class="primary-btn">Save Subcategory</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="category-list-section">
+                            <h4>Existing Subcategories</h4>
+                            <div class="table-container">
+                                <table id="meal-subcategories-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Description</th>
+                                            <th>Parent Category</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Subcategories will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="no-meal-subcategories-message" class="empty-message" style="display: none;">
+                                <i class="fas fa-info-circle"></i>
+                                <p>No subcategories found. Add a new subcategory using the form.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Price Update Modal -->
+    <div class="modal" id="bulk-price-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Bulk Price Update</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="bulk-price-form">
+                    <div class="form-group">
+                        <label>Update prices by:</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="price-update-type" value="percentage" checked> Percentage
+                            </label>
+                            <label>
+                                <input type="radio" name="price-update-type" value="fixed"> Fixed Amount
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="price-update-value">Value</label>
+                        <div class="price-input-wrapper">
+                            <span class="currency-symbol" id="price-update-symbol">%</span>
+                            <input type="number" id="price-update-value" step="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Operation:</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="price-update-operation" value="increase" checked> Increase
+                            </label>
+                            <label>
+                                <input type="radio" name="price-update-operation" value="decrease"> Decrease
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Apply to:</label>
+                        <select id="bulk-update-filter">
+                            <option value="all">All Meals</option>
+                            <option value="category">Specific Category</option>
+                            <option value="subcategory">Specific Subcategory</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="bulk-category-container" style="display: none;">
+                        <label for="bulk-category">Category:</label>
+                        <select id="bulk-category">
+                            <option value="">-- Select Category --</option>
+                            <!-- Categories will be loaded here -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="bulk-subcategory-container" style="display: none;">
+                        <label for="bulk-subcategory">Subcategory:</label>
+                        <select id="bulk-subcategory">
+                            <option value="">-- Select Subcategory --</option>
+                            <!-- Subcategories will be loaded here -->
+                        </select>
+                    </div>
+                    
+                    <div class="preview-section">
+                        <h4>Preview</h4>
+                        <p class="preview-text">This will increase all meal prices by 10%.</p>
+                        <div class="preview-count">
+                            <span id="affected-count">0</span> meals will be affected.
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="secondary-btn" id="cancel-bulk-price">Cancel</button>
+                        <button type="submit" class="primary-btn">Apply Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
