@@ -1470,3 +1470,20 @@ body.green-theme .settings-menu {
     width: 120px;
     color: #666;
 } 
+.credit-select-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+#select-all-credits {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.credit-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 15px;
+}

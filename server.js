@@ -21,6 +21,9 @@ const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) =
         
         // Create tables after successful connection
         createTables();
+        
+        // Add sample data if not already present
+        addSampleData();
     }
 });
 
@@ -99,6 +102,7 @@ function createTables() {
         amount_used REAL NOT NULL,
         date_used DATETIME DEFAULT CURRENT_TIMESTAMP,
         meal_id INTEGER,
+        note TEXT,
         FOREIGN KEY (credit_id) REFERENCES credit(id),
         FOREIGN KEY (meal_id) REFERENCES meal(id)
     )`, handleError);
@@ -122,6 +126,155 @@ function handleError(err) {
     if (err) {
         console.error('Error creating table:', err.message);
     }
+}
+
+// Function to add sample data if not already present
+async function addSampleData() {
+    console.log('Checking for sample data...');
+    
+    // Check if data already exists to avoid duplicates
+    db.get('SELECT COUNT(*) as count FROM guest_category', [], (err, result) => {
+        if (err) {
+            console.error('Error checking for existing data:', err.message);
+            return;
+        }
+        
+        // Only add sample data if no categories exist
+        if (result.count === 0) {
+            console.log('No sample data found. Adding sample data...');
+            
+            // Add guest categories
+            const guestCategories = [
+                { name: 'VIP', description: 'Very Important Persons' },
+                { name: 'Regular', description: 'Regular customers' },
+                { name: 'New', description: 'First-time guests' }
+            ];
+            
+            // Add meal categories
+            const mealCategories = [
+                { name: 'Breakfast', description: 'Morning meals' },
+                { name: 'Lunch', description: 'Midday meals' },
+                { name: 'Dinner', description: 'Evening meals' },
+                { name: 'Desserts', description: 'Sweet treats' },
+                { name: 'Beverages', description: 'Drinks' }
+            ];
+            
+            // Add sample guests
+            const guests = [
+                { name: 'John Smith', phone: '555-123-4567', email: 'john@example.com', address: '123 Main St', category_id: 1 },
+                { name: 'Jane Doe', phone: '555-987-6543', email: 'jane@example.com', address: '456 Oak Ave', category_id: 1 },
+                { name: 'Bob Johnson', phone: '555-456-7890', email: 'bob@example.com', address: '789 Pine Rd', category_id: 2 },
+                { name: 'Alice Williams', phone: '555-567-8901', email: 'alice@example.com', address: '101 Maple Dr', category_id: 2 },
+                { name: 'Charlie Brown', phone: '555-234-5678', email: 'charlie@example.com', address: '202 Cedar Ln', category_id: 3 }
+            ];
+            
+            // Insert guest categories
+            db.serialize(() => {
+                const categoryStmt = db.prepare('INSERT INTO guest_category (name, description) VALUES (?, ?)');
+                guestCategories.forEach(category => {
+                    categoryStmt.run([category.name, category.description]);
+                });
+                categoryStmt.finalize();
+                
+                // Insert meal categories
+                const mealCategoryStmt = db.prepare('INSERT INTO meal_category (name, description) VALUES (?, ?)');
+                mealCategories.forEach(category => {
+                    mealCategoryStmt.run([category.name, category.description]);
+                });
+                mealCategoryStmt.finalize();
+                
+                // Add meal subcategories
+                const mealSubcategories = [
+                    { name: 'Continental', description: 'Light breakfast items', category_id: 1 },
+                    { name: 'American', description: 'Hearty breakfast', category_id: 1 },
+                    { name: 'Sandwiches', description: 'Lunch sandwiches', category_id: 2 },
+                    { name: 'Salads', description: 'Fresh salads', category_id: 2 },
+                    { name: 'Appetizers', description: 'Starters', category_id: 3 },
+                    { name: 'Main Course', description: 'Main dinner dishes', category_id: 3 },
+                    { name: 'Cakes', description: 'Sweet cakes', category_id: 4 },
+                    { name: 'Ice Cream', description: 'Cold treats', category_id: 4 },
+                    { name: 'Hot Drinks', description: 'Coffee and tea', category_id: 5 },
+                    { name: 'Cold Drinks', description: 'Sodas and juices', category_id: 5 }
+                ];
+                
+                const subcategoryStmt = db.prepare('INSERT INTO meal_subcategory (name, description, category_id) VALUES (?, ?, ?)');
+                mealSubcategories.forEach(subcategory => {
+                    subcategoryStmt.run([subcategory.name, subcategory.description, subcategory.category_id]);
+                });
+                subcategoryStmt.finalize();
+                
+                // Add sample meals
+                const meals = [
+                    // Breakfast - Continental
+                    { name: 'Croissant', description: 'Buttery, flaky pastry', price: 3.50, subcategory_id: 1 },
+                    { name: 'Fruit Platter', description: 'Assorted fresh fruits', price: 5.75, subcategory_id: 1 },
+                    { name: 'Yogurt Parfait', description: 'Yogurt with granola and berries', price: 4.50, subcategory_id: 1 },
+                    
+                    // Breakfast - American
+                    { name: 'Pancakes', description: 'Stack of fluffy pancakes with syrup', price: 7.99, subcategory_id: 2 },
+                    { name: 'Breakfast Combo', description: 'Eggs, bacon, toast, and potatoes', price: 10.99, subcategory_id: 2 },
+                    { name: 'Omelette', description: 'Three-egg omelette with cheese and vegetables', price: 9.50, subcategory_id: 2 },
+                    
+                    // Lunch - Sandwiches
+                    { name: 'Club Sandwich', description: 'Triple-decker sandwich with turkey, bacon, and lettuce', price: 11.50, subcategory_id: 3 },
+                    { name: 'BLT', description: 'Bacon, lettuce, and tomato sandwich', price: 8.75, subcategory_id: 3 },
+                    { name: 'Grilled Cheese', description: 'Classic grilled cheese sandwich', price: 6.50, subcategory_id: 3 },
+                    
+                    // Lunch - Salads
+                    { name: 'Caesar Salad', description: 'Romaine lettuce with Caesar dressing and croutons', price: 9.99, subcategory_id: 4 },
+                    { name: 'Greek Salad', description: 'Mixed greens with feta, olives, and Greek dressing', price: 10.50, subcategory_id: 4 },
+                    { name: 'Cobb Salad', description: 'Chopped salad with chicken, bacon, egg, and avocado', price: 12.99, subcategory_id: 4 },
+                    
+                    // Dinner - Appetizers
+                    { name: 'Mozzarella Sticks', description: 'Breaded and fried mozzarella with marinara sauce', price: 7.99, subcategory_id: 5 },
+                    { name: 'Chicken Wings', description: 'Buffalo wings with dipping sauce', price: 9.99, subcategory_id: 5 },
+                    { name: 'Spinach Dip', description: 'Creamy spinach and artichoke dip with chips', price: 8.50, subcategory_id: 5 },
+                    
+                    // Dinner - Main Course
+                    { name: 'Grilled Salmon', description: 'Grilled salmon fillet with vegetables', price: 16.99, subcategory_id: 6 },
+                    { name: 'Steak', description: '8oz sirloin steak with mashed potatoes', price: 19.99, subcategory_id: 6 },
+                    { name: 'Pasta Alfredo', description: 'Fettuccine with creamy Alfredo sauce', price: 13.50, subcategory_id: 6 },
+                    
+                    // Desserts - Cakes
+                    { name: 'Chocolate Cake', description: 'Rich chocolate layer cake', price: 5.99, subcategory_id: 7 },
+                    { name: 'Cheesecake', description: 'New York style cheesecake', price: 6.50, subcategory_id: 7 },
+                    { name: 'Carrot Cake', description: 'Spiced carrot cake with cream cheese frosting', price: 5.75, subcategory_id: 7 },
+                    
+                    // Desserts - Ice Cream
+                    { name: 'Ice Cream Sundae', description: 'Vanilla ice cream with toppings', price: 4.99, subcategory_id: 8 },
+                    { name: 'Milkshake', description: 'Thick and creamy milkshake', price: 4.50, subcategory_id: 8 },
+                    { name: 'Sorbet', description: 'Fruit sorbet', price: 3.99, subcategory_id: 8 },
+                    
+                    // Beverages - Hot Drinks
+                    { name: 'Coffee', description: 'Freshly brewed coffee', price: 2.50, subcategory_id: 9 },
+                    { name: 'Tea', description: 'Assorted teas', price: 2.25, subcategory_id: 9 },
+                    { name: 'Hot Chocolate', description: 'Rich hot chocolate with whipped cream', price: 3.25, subcategory_id: 9 },
+                    
+                    // Beverages - Cold Drinks
+                    { name: 'Iced Tea', description: 'Sweetened or unsweetened iced tea', price: 2.50, subcategory_id: 10 },
+                    { name: 'Soda', description: 'Assorted soft drinks', price: 2.00, subcategory_id: 10 },
+                    { name: 'Lemonade', description: 'Fresh-squeezed lemonade', price: 3.00, subcategory_id: 10 }
+                ];
+                
+                const mealStmt = db.prepare('INSERT INTO meal (name, description, price, subcategory_id) VALUES (?, ?, ?, ?)');
+                meals.forEach(meal => {
+                    mealStmt.run([meal.name, meal.description, meal.price, meal.subcategory_id]);
+                });
+                mealStmt.finalize();
+                
+                // Insert guests
+                const guestStmt = db.prepare('INSERT INTO guest (name, phone, email, address, category_id) VALUES (?, ?, ?, ?, ?)');
+                guests.forEach(guest => {
+                    guestStmt.run([guest.name, guest.phone, guest.email, guest.address, guest.category_id]);
+                });
+                guestStmt.finalize();
+                
+                console.log('Sample data added successfully.');
+            });
+        } else {
+            console.log('Sample data already exists.');
+        }
+    });
 }
 
 // API ENDPOINTS FOR GUEST CATEGORIES
@@ -567,8 +720,8 @@ app.patch('/api/meals/:id/price', (req, res) => {
 app.delete('/api/meals/:id', (req, res) => {
     const { id } = req.params;
     
-    // Check if this meal is referenced in credits first
-    db.get('SELECT COUNT(*) as count FROM credit WHERE meal_id = ?', [id], (err, result) => {
+    // Check if this meal is referenced in credit_meal junction table first
+    db.get('SELECT COUNT(*) as count FROM credit_meal WHERE meal_id = ?', [id], (err, result) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
@@ -582,8 +735,8 @@ app.delete('/api/meals/:id', (req, res) => {
             return;
         }
         
-        // If no credits use this meal, check paid_credits
-        db.get('SELECT COUNT(*) as count FROM paid_credits WHERE meal_id = ?', [id], (err, result) => {
+        // If no credits use this meal, check paid_credit_meals junction table
+        db.get('SELECT COUNT(*) as count FROM paid_credit_meals WHERE meal_id = ?', [id], (err, result) => {
             if (err) {
                 res.status(500).json({ error: err.message });
                 return;
@@ -1493,6 +1646,74 @@ app.get('/api/credits/:id/paid-details', (req, res) => {
             res.json(result);
         }
     );
+});
+
+// Mark multiple credits as paid
+app.post('/api/credits/mark-paid', (req, res) => {
+    const { credit_ids, payment_date, note } = req.body;
+    
+    if (!credit_ids || !Array.isArray(credit_ids) || credit_ids.length === 0 || !payment_date) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    // Start a transaction to ensure all operations succeed or fail together
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        let success = true;
+        let processed = 0;
+        
+        // Process each credit in the array
+        credit_ids.forEach(creditId => {
+            // Add record to paid_credits table
+            db.get(
+                'SELECT amount FROM credit WHERE id = ?',
+                [creditId],
+                (err, row) => {
+                    if (err || !row) {
+                        console.error(`Error fetching credit amount for ${creditId}:`, err);
+                        success = false;
+                        return;
+                    }
+                    
+                    db.run(
+                        'INSERT INTO paid_credits (credit_id, amount_used, date_used, note) VALUES (?, ?, ?, ?)',
+                        [creditId, row.amount, payment_date, note || ''],
+                        function(err) {
+                            if (err) {
+                                console.error(`Error inserting paid credit for ${creditId}:`, err);
+                                success = false;
+                                return;
+                            }
+                            
+                            processed++;
+                            
+                            // If all credits have been processed, commit or rollback
+                            if (processed === credit_ids.length) {
+                                if (success) {
+                                    db.run('COMMIT', err => {
+                                        if (err) {
+                                            console.error('Error committing transaction:', err);
+                                            db.run('ROLLBACK');
+                                            res.status(500).json({ error: 'Failed to commit transaction' });
+                                        } else {
+                                            res.json({
+                                                message: `${credit_ids.length} credit(s) marked as paid successfully`,
+                                                credits: credit_ids
+                                            });
+                                        }
+                                    });
+                                } else {
+                                    db.run('ROLLBACK');
+                                    res.status(500).json({ error: 'Failed to mark all credits as paid' });
+                                }
+                            }
+                        }
+                    );
+                }
+            );
+        });
+    });
 });
 
 // Helper function to process credits in batches

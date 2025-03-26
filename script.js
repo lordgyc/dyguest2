@@ -13,6 +13,7 @@ let bulkPriceModal, bulkPriceForm, priceUpdateTypeRadios, priceUpdateOperationRa
 let priceUpdateValue, priceUpdateSymbol, bulkUpdateFilter, bulkCategoryContainer;
 let bulkSubcategoryContainer, bulkCategorySelect, bulkSubcategorySelect;
 let previewText, affectedCount, cancelBulkPriceBtn;
+let deleteCallback = null; // Make deleteCallback global so it's accessible across all functions
 
 // Global state variables for meal management
 let currentMeals = [];
@@ -84,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCategories = [];
     let currentGuestId = null;
     let currentCategoryId = null;
-    let deleteCallback = null;
     
     // Elements for guest management
     const addGuestBtn = document.getElementById('add-guest-btn');
@@ -123,6 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmMessage = document.getElementById('confirm-message');
     const confirmActionBtn = document.getElementById('confirm-action');
     const cancelConfirmBtn = document.getElementById('cancel-confirm');
+    
+    // Ensure confirmation modal has higher z-index
+    if (confirmModal) {
+        confirmModal.style.zIndex = '9999'; // Set a high z-index for the confirmation modal
+    }
     
     // Initialize meal management elements 
     // Elements for meal management (assign to global variables)
@@ -814,11 +819,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Set the category and load subcategories
                 const categorySelect = document.getElementById('meal-category');
-                categorySelect.value = meal.category_id || '';
+                categorySelect.value = meal.categoryId || '';
                 
                 // Load subcategories for this meal's category
-                if (meal.category_id) {
-                    loadSubcategoriesForMeal(meal.category_id, meal.subcategory_id);
+                if (meal.categoryId) {
+                    loadSubcategoriesForMeal(meal.categoryId, meal.subcategoryId);
                 }
                 
                 // Update the modal title
@@ -960,6 +965,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Reset the form
         resetMealCategoryForm();
+        
+        // Ensure we load categories for the subcategory parent dropdown
+        loadMealCategoriesForSubcategoryForm();
         
         // Open the modal
         mealCategoryModal.style.display = 'block';
@@ -1134,6 +1142,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update content visibility
                 modalTabContents.forEach(content => content.classList.remove('active'));
                 document.getElementById(`${tabId}-tab`).classList.add('active');
+                
+                // Load subcategories when switching to the subcategories tab
+                if (tabId === 'subcategories') {
+                    loadMealSubcategories();
+                }
             });
         });
         
@@ -1835,8 +1848,8 @@ loadCreditGuestCategories = async function() {
             categorySelect.appendChild(option);
         });
     } catch (error) {
-        showToast(error.message, 'error');
         console.error('Error loading guest categories:', error);
+        showToast('Failed to load categories', 'error');
     }
 }
 
@@ -1865,8 +1878,405 @@ loadCreditMealCategories = async function() {
         // Initialize meal subcategories for the first category or "all"
         loadCreditMealSubcategories('all');
     } catch (error) {
-        showToast(error.message, 'error');
         console.error('Error loading meal categories:', error);
+        showToast('Failed to load meal categories', 'error');
+    }
+}
+
+// Replace the loadCreditMealSubcategories function with this corrected version
+async function loadCreditMealSubcategories(categoryId) {
+    try {
+        const subcategoryFilter = document.getElementById('credit-meal-subcategory-filter');
+        
+        if (!subcategoryFilter) return;
+        
+        subcategoryFilter.innerHTML = '<option value="all">All Subcategories</option>';
+        
+        if (categoryId === 'all') {
+            return;
+        }
+        
+        // Use absolute URL with API_BASE_URL
+        const response = await fetch(`${API_BASE_URL}/api/meal-subcategories/category/${categoryId}`);
+        const subcategories = await response.json();
+        
+        subcategories.forEach(subcategory => {
+            const option = document.createElement('option');
+            option.value = subcategory.id;
+            option.textContent = subcategory.name;
+            subcategoryFilter.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading meal subcategories:', error);
+    }
+}
+
+// Step 2: Guest Selection events
+setupGuestStep = function() {
+    try {
+        // Back button
+        const backToDateBtn = document.getElementById('back-to-date');
+        if (backToDateBtn) {
+            backToDateBtn.addEventListener('click', function() {
+                document.getElementById('step-guest').style.display = 'none';
+                document.getElementById('step-date').style.display = 'block';
+            });
+        }
+        loadCreditGuestCategories()
+        // Category filter change
+        const categoryFilter = document.getElementById('credit-category-filter');
+        
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', function() {
+                loadCreditGuests(this.value);
+            });
+        }
+        
+        // Add new guest link
+        const addNewGuestLink = document.getElementById('add-new-guest-link');
+        if (addNewGuestLink) {
+            addNewGuestLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Open the guest modal (reuse the existing one from guest management)
+                document.getElementById('guest-modal-title').textContent = 'Add New Guest';
+                document.getElementById('guest-id').value = '';
+                document.getElementById('guest-form').reset();
+                document.getElementById('guest-modal').style.display = 'block';
+            });
+        }
+    } catch (error) {
+        console.error('Error in setupGuestStep:', error);
+    }
+};
+
+// The remaining function implementations...
+// Note: Implementing a few crucial ones below, but you'd need to add all of them
+
+// Go to meals selection step
+goToMealsStep = function() {
+    if (!selectedGuest) {
+        showToast('Please select a guest', 'error');
+        return;
+    }
+    
+    document.getElementById('step-guest').style.display = 'none';
+    document.getElementById('step-meals').style.display = 'block';
+    
+    // Load meals
+    loadMealsForCreditFlow();
+    
+    updateCreditSidebar();
+};
+
+// Step 3: Meals Selection events
+setupMealsStep = function() {
+    try {
+        // Load meal categories and subcategories
+        loadMealCategoriesForCreditFlow();
+
+        // Back button
+        const backToGuestBtn = document.getElementById('back-to-guest');
+        if (backToGuestBtn) {
+            backToGuestBtn.addEventListener('click', function() {
+                document.getElementById('step-meals').style.display = 'none';
+                document.getElementById('step-guest').style.display = 'block';
+            });
+        }
+        
+        // Complete button
+        const completeCreditBtn = document.getElementById('complete-credit-btn');
+        if (completeCreditBtn) {
+            completeCreditBtn.addEventListener('click', function() {
+                if (!selectedMeals || selectedMeals.length === 0) {
+                    showToast('Please select at least one meal', 'error');
+                    return;
+                }
+                
+                goToConfirmStep();
+            });
+        }
+        
+        // Category change event
+        const mealCategoryFilter = document.getElementById('credit-meal-category-filter');
+        if (mealCategoryFilter) {
+            mealCategoryFilter.addEventListener('change', function() {
+                loadMealSubcategoriesForCreditFlow(this.value);
+                loadCreditMeals();
+            });
+        }
+        
+        // Subcategory change event
+        const mealSubcategoryFilter = document.getElementById('credit-meal-subcategory-filter');
+        if (mealSubcategoryFilter) {
+            mealSubcategoryFilter.addEventListener('change', function() {
+                loadCreditMeals();
+            });
+        }
+        
+        // Meal search event
+        const mealSearch = document.getElementById('credit-meal-search');
+        if (mealSearch) {
+            mealSearch.addEventListener('input', debounce(function() {
+                loadCreditMeals();
+            }, 300));
+        }
+    } catch (error) {
+        console.error('Error in setupMealsStep:', error);
+    }
+};
+
+// Step 4: Confirmation events
+setupConfirmStep = function() {
+    try {
+        // Back button
+        const backToMealsBtn = document.getElementById('back-to-meals');
+        if (backToMealsBtn) {
+            backToMealsBtn.addEventListener('click', function() {
+                document.getElementById('step-confirm').style.display = 'none';
+                document.getElementById('step-meals').style.display = 'block';
+            });
+        }
+        
+        // Cancel button
+        const cancelCreditBtn = document.getElementById('cancel-credit');
+        if (cancelCreditBtn) {
+            cancelCreditBtn.addEventListener('click', function() {
+                // Confirm cancel
+                const confirmMessage = 'Are you sure you want to cancel? All selections will be lost.';
+                
+                if (confirm(confirmMessage)) {
+                    initCreditFlow();
+                }
+            });
+        }
+        
+        // Save credit button
+        const saveCreditBtn = document.getElementById('save-credit-btn');
+        if (saveCreditBtn) {
+            saveCreditBtn.addEventListener('click', function() {
+                saveCredit();
+            });
+        }
+    } catch (error) {
+        console.error('Error in setupConfirmStep:', error);
+    }
+};
+
+// Success step events
+setupSuccessStep = function() {
+    try {
+        // View credits button
+        const viewCreditsBtn = document.getElementById('view-credits-btn');
+        if (viewCreditsBtn) {
+            viewCreditsBtn.addEventListener('click', function() {
+                // Navigate to credit management tab
+                const creditManagementTab = document.querySelector('li[data-tab="credit-management"]');
+                if (creditManagementTab) {
+                    creditManagementTab.click();
+                }
+            });
+        }
+        
+        // Add another credit button
+        const addAnotherCreditBtn = document.getElementById('add-another-credit-btn');
+        if (addAnotherCreditBtn) {
+            addAnotherCreditBtn.addEventListener('click', function() {
+                resetCreditFlow(); // This will reset and take back to step 1
+            });
+        }
+    } catch (error) {
+        console.error('Error in setupSuccessStep:', error);
+    }
+};
+
+// Add these to your global variables declaration at the top of the file
+
+
+// Then implement these functions before they get called
+
+// Initialize the credit flow
+function initCreditFlow() {
+    try {
+        // Initialize key variables
+        selectedMeals = [];
+        selectedDate = null;
+        selectedGuest = null;
+        
+        // Make sure sidebar is visible when Add Credit tab is selected
+        document.getElementById('sidebar').style.display = 'block';
+        
+        setupDateStep();
+        setupCreditFlowEventListeners();
+        resetCreditFlow();
+    } catch (error) {
+        console.error('Error in initCreditFlow:', error);
+    }
+}
+
+// Update the tab click handler to ensure proper initialization
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('nav ul li').forEach(tab => {
+        tab.addEventListener('click', function() {
+            // First, hide all tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Then show the selected tab content
+            const tabId = this.getAttribute('data-tab');
+            const tabContent = document.getElementById(tabId);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+            
+            // Handle sidebar visibility
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                if (tabId === 'add-credit') {
+                    sidebar.style.display = 'block';
+                    initCreditFlow(); // Initialize the credit flow
+                } else {
+                    //sidebar.style.display = 'none';
+                }
+            }
+            
+            // Update active tab
+            document.querySelectorAll('nav ul li').forEach(t => {
+                t.classList.remove('active');
+            });
+            this.classList.add('active');
+        });
+    });
+});
+
+// Function to update the sidebar with current selections
+updateCreditSidebar = function() {
+    // Update date
+    const sidebarDate = document.getElementById('sidebar-date');
+    if (selectedDate) {
+        const formattedDate = new Date(selectedDate).toLocaleDateString();
+        sidebarDate.textContent = formattedDate;
+    } else {
+        sidebarDate.textContent = 'Not selected';
+    }
+    
+    // Update guest
+    const sidebarGuest = document.getElementById('sidebar-guest');
+    if (selectedGuest) {
+        sidebarGuest.textContent = selectedGuest.name;
+    } else {
+        sidebarGuest.textContent = 'Not selected';
+    }
+    
+    // Update meals list
+    const sidebarMealsList = document.getElementById('sidebar-meals-list');
+    if (selectedMeals && selectedMeals.length > 0) {
+        let mealsHTML = '';
+        selectedMeals.forEach(meal => {
+            mealsHTML += `<div class="sidebar-meal-item">
+                <span class="meal-name">${meal.name}</span>
+                <span class="meal-price">$${parseFloat(meal.price).toFixed(2)}</span>
+            </div>`;
+        });
+        sidebarMealsList.innerHTML = mealsHTML;
+    } else {
+        sidebarMealsList.innerHTML = '<p class="empty-selection">No meals selected</p>';
+    }
+    
+    // Update total
+    const sidebarTotal = document.getElementById('sidebar-total');
+    const total = selectedMeals ? selectedMeals.reduce((sum, meal) => sum + parseFloat(meal.price), 0) : 0;
+    sidebarTotal.textContent = `$${total.toFixed(2)}`;
+};
+
+// Step 1: Date Selection
+setupDateStep = function() {
+    const dateInput = document.getElementById('credit-date');
+    const nextBtn = document.getElementById('date-next-btn');
+    
+    dateInput.addEventListener('change', function() {
+        // Set both variables to avoid confusion
+        selectedDate = this.value;
+        selectedCreditDate = this.value;
+        updateCreditSidebar();
+    });
+    
+    nextBtn.addEventListener('click', function() {
+        if (dateInput.value) {
+            // Set both variables to avoid confusion
+            selectedDate = dateInput.value;
+            selectedCreditDate = dateInput.value;
+            goToGuestStep();
+        } else {
+            showToast('Please select a date', 'error');
+        }
+    });
+};
+
+// Go to guest selection step
+goToGuestStep = function() {
+    document.getElementById('step-date').style.display = 'none';
+    document.getElementById('step-guest').style.display = 'block';
+    
+    // Load guests - use loadCreditGuests instead of loadGuestsForCreditFlow
+    loadCreditGuests();
+    
+    updateCreditSidebar();
+};
+
+// Load categories for guest selection
+loadCreditGuestCategories = async function() {
+    try {
+        const response = await fetch('http://localhost:3000/api/guest-categories');
+        if (!response.ok) throw new Error('Failed to load guest categories');
+        const categories = await response.json();
+        const categorySelect = document.getElementById('credit-category-filter');
+        
+        // Clear existing options except the "All Categories" option
+        while (categorySelect.options.length > 1) {
+            categorySelect.remove(1);
+        }
+        
+        // Add categories from the database
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.name;
+            categorySelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading guest categories:', error);
+        showToast('Failed to load categories', 'error');
+    }
+}
+
+// Load meals for guest selection
+loadCreditMealCategories = async function() {
+    try {
+        const response = await fetch('http://localhost:3000/api/meal-categories');
+        if (!response.ok) throw new Error('Failed to load meal categories');
+        
+        const categories = await response.json();
+        const categorySelect = document.getElementById('credit-meal-category-filter');
+        
+        // Clear existing options except the "All Categories" option
+        while (categorySelect.options.length > 1) {
+            categorySelect.remove(1);
+        }
+        
+        // Add categories from the database
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.name;
+            categorySelect.appendChild(option);
+        });
+        
+        // Initialize meal subcategories for the first category or "all"
+        loadCreditMealSubcategories('all');
+    } catch (error) {
+        console.error('Error loading meal categories:', error);
+        showToast('Failed to load meal categories', 'error');
     }
 }
 
@@ -2774,121 +3184,6 @@ async function loadGuestCredits(searchTerm) {
     }
 }
 
-// Function to display credit history for a specific guest
-async function displayGuestCreditHistory(guestId) {
-    try {
-        console.log("Displaying credit history for guest ID:", guestId);
-        
-        // Store the guest ID on the container for later use
-        const creditContainer = document.getElementById('guest-credits-container');
-        creditContainer.setAttribute('data-guest-id', guestId);
-        
-        const [guestResponse, creditsResponse] = await Promise.all([
-            fetch(`http://localhost:3000/api/guests/${guestId}`),
-            fetch(`http://localhost:3000/api/credits/guest/${guestId}`)
-        ]);
-        
-        if (!guestResponse.ok || !creditsResponse.ok) {
-            throw new Error('Failed to fetch guest or credits data');
-        }
-        
-        const guest = await guestResponse.json();
-        const credits = await creditsResponse.json();
-        
-        // Calculate total amount
-        let totalAmount = 0;
-        if (credits.length > 0) {
-            totalAmount = credits.reduce((sum, credit) => sum + parseFloat(credit.amount), 0);
-        }
-        
-        // Generate HTML to display guest and credits data
-        let html = `
-            <div class="guest-header">
-                <div class="guest-info">
-                    <h3>${guest.name}</h3>
-                    <p class="guest-category">${guest.category ? guest.category.name : 'No Category'}</p>
-                    <p class="guest-contact">${guest.phone || 'No Phone'} | ${guest.email || 'No Email'}</p>
-                </div>
-                <div class="guest-actions">
-                    <button class="primary-btn" onclick="startCreditFlowForGuest(${JSON.stringify(guest)})">
-                        <i class="fas fa-plus-circle"></i> Add Credit
-                    </button>
-                    <button class="secondary-btn" onclick="viewGuestCredits(${JSON.stringify(guest)})">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                </div>
-            </div>
-            
-            <div class="credit-summary-card">
-                <div class="credit-summary-header">
-                    <h3>Credit Summary</h3>
-                    <span class="total-amount">Total: $${totalAmount.toFixed(2)}</span>
-                </div>
-            </div>
-            
-            <div class="credits-list-container">
-                <h3>Credit History</h3>`;
-                
-        if (credits.length === 0) {
-            html += `
-                <div class="empty-message">
-                    <i class="fas fa-info-circle"></i>
-                    <p>No credits found for this guest.</p>
-                </div>`;
-        } else {
-            html += `
-                <div class="credits-list">
-                    <table class="credits-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Items</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-                        
-            credits.forEach(credit => {
-                const date = new Date(credit.date).toLocaleDateString();
-                html += `
-                    <tr>
-                        <td>${date}</td>
-                        <td>$${parseFloat(credit.amount).toFixed(2)}</td>
-                        <td>${credit.items ? credit.items.length : 0} items</td>
-                        <td><span class="status-badge ${credit.paid ? 'paid' : 'unpaid'}">${credit.paid ? 'Paid' : 'Unpaid'}</span></td>
-                        <td>
-                            <button class="text-btn" onclick="viewCreditDetails(${credit.id})">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                            ${!credit.paid ? `
-                            <button class="text-btn success-text" onclick="markCreditAsPaid(${credit.id})">
-                                <i class="fas fa-check-circle"></i> Mark Paid
-                            </button>` : ''}
-                        </td>
-                    </tr>`;
-            });
-            
-            html += `
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-        
-        html += `</div>`;
-        
-        // Update the container with the generated HTML
-        creditContainer.innerHTML = html;
-        
-    } catch (error) {
-        console.error('Error displaying guest credit history:', error);
-        document.getElementById('guest-credits-container').innerHTML = 
-            `<p class="error-message">Error: ${error.message}</p>
-             <p>Make sure your server is running at ${API_BASE_URL} and has the necessary endpoints.</p>`;
-    }
-}
-
 // Update setupCreditManagementTab function or add if it doesn't exist
 function setupCreditManagementTab() {
     // Load categories for the filter
@@ -3084,11 +3379,12 @@ function filterGuestsForCreditManagement(searchTerm) {
     let matchFound = false;
     
     guestCards.forEach(card => {
-        const guestName = card.querySelector('.guest-name').textContent.toLowerCase();
+        const guestName = card.querySelector('h4').textContent.toLowerCase();
         const guestDetails = card.querySelector('.guest-details')?.textContent.toLowerCase() || '';
         
-        if (guestName.includes(searchTerm.toLowerCase()) || 
-            guestDetails.includes(searchTerm.toLowerCase())) {
+        if (searchTerm === '' || 
+            guestName.includes(searchTerm) || 
+            guestDetails.includes(searchTerm)) {
             card.style.display = 'block';
             matchFound = true;
         } else {
@@ -3207,7 +3503,7 @@ async function viewGuestCredits(guest) {
         `;
         
         if (credits.length === 0) {
-            html += '<div class="no-credits">No credits found for this guest. Add a new credit using the button above.</div>';
+            html += `<div class="no-credits">No credits found for this guest. Add a new credit using the button above.</div>`;
         } else {
             html += `
                 <div class="credit-history-summary">
@@ -3225,35 +3521,44 @@ async function viewGuestCredits(guest) {
                 <div class="credit-view detailed-view">
                     <h4>Credit History</h4>
                     <table class="credit-history-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Note</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
+            <thead>
+                 <tr>
+                    <th><input type="checkbox" id="select-all-credits" title="Select All"></th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Note</th>
+                        <th>Actions</th>
+                </tr>
+                    </thead>
                         <tbody>
             `;
             
             credits.forEach(credit => {
                 const date = new Date(credit.date_credited).toLocaleDateString();
                 
-                html += `
-                    <tr>
-                        <td>${date}</td>
-                        <td>$${parseFloat(credit.amount || 0).toFixed(2)}</td>
-                        <td>${credit.note || '-'}</td>
-                        <td>
-                            <button class="view-credit-btn" data-id="${credit.id}">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                        </td>
-                    </tr>
-                `;
+html += `
+    <tr data-credit-id="${credit.id}">
+        <td><input type="checkbox" class="credit-select-checkbox" data-id="${credit.id}"></td>
+        <td>${date}</td>
+        <td>$${parseFloat(credit.amount || 0).toFixed(2)}</td>
+        <td>${credit.note || '-'}</td>
+        <td>
+            <button class="view-credit-btn" data-id="${credit.id}">
+                <i class="fas fa-eye"></i> View
+            </button>
+        </td>
+    </tr>
+`;
             });
             
-            html += '</tbody></table></div>';
+           html += '</tbody></table>';
+           html += `
+               <div class="credit-actions-row" style="margin-top: 15px;">
+                   <button id="mark-selected-paid-btn" class="primary-btn" disabled>
+                       <i class="fas fa-check-circle"></i> Mark Selected as Paid
+                   </button>
+               </div>
+           </div>`;
             
             // Summary View (hidden initially)
             html += `
@@ -3361,25 +3666,6 @@ async function viewGuestCredits(guest) {
     }
 }
 
-// Function to start the credit flow for a specific guest
-function startCreditFlowForGuest(guest) {
-    // Switch to the add credit tab
-    const addCreditTab = document.querySelector('li[data-tab="add-credit"]');
-    if (addCreditTab) {
-        addCreditTab.click();
-        
-        // Wait for the tab to fully load
-        setTimeout(() => {
-            // Skip to step 2 (guest selection) and pre-select the guest
-            document.getElementById('step-date').style.display = 'none';
-            document.getElementById('step-guest').style.display = 'block';
-            
-            // Simulate selecting this guest
-            selectGuest(guest);
-        }, 300);
-    }
-}
-
 // Call this function when the document is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Add this to your existing DOMContentLoaded event
@@ -3415,7 +3701,28 @@ async function viewCreditDetails(creditId) {
         
         document.body.appendChild(modal);
         modal.style.display = 'block';
+        // Add event listener for select all checkbox
+        const selectAllCheckbox = document.getElementById('select-all-credits');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                document.querySelectorAll('.credit-select-checkbox').forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                });
+                updateMarkPaidButtonVisibility();
+            });
+        }
         
+        // Add event listeners for individual credit checkboxes
+        document.querySelectorAll('.credit-select-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateMarkPaidButtonVisibility);
+        });
+        
+        // Add event listener for the mark as paid button
+        const markPaidButton = document.getElementById('mark-selected-paid-btn');
+        if (markPaidButton) {
+            markPaidButton.addEventListener('click', markSelectedCreditsPaid);
+        }
         // Add event listener to close the modal
         modal.querySelector('.close-modal').addEventListener('click', () => {
             modal.style.display = 'none';
@@ -3451,9 +3758,11 @@ async function viewCreditDetails(creditId) {
                         meals = await mealsResponse.json();
                     } else {
                         console.warn(`Could not fetch meals for credit ${creditId}: ${mealsResponse.status}`);
+                        meals = [];
                     }
-                } catch (mealsError) {
-                    console.warn(`Error fetching meals for credit ${creditId}:`, mealsError);
+                } catch (mealError) {
+                    console.warn(`Error fetching meals for credit ${creditId}:`, mealError);
+                    meals = [];
                 }
             }
         } catch (error) {
@@ -3568,7 +3877,7 @@ document.getElementById('meal-form').addEventListener('submit', function(event) 
     fetch(url, {
         method: method,
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             name,
@@ -4189,7 +4498,7 @@ async function loadGuestsWithPaidCredits(categoryId = 'all') {
     try {
         let url = 'http://localhost:3000/api/guests-with-paid-credits';
         if (categoryId !== 'all') {
-            url += `?category=${categoryId}`;
+            url = `${url}?category=${categoryId}`;
         }
         
         const response = await fetch(url);
@@ -4265,11 +4574,11 @@ async function viewGuestPaidCredits(guest) {
                 <div class="credit-history-summary">
                     <div class="summary-item">
                         <span class="summary-label">Total Paid Credits</span>
-                        <span>${paidCredits.length}</span>
+                        <strong>${paidCredits.length}</strong>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Total Paid Amount</span>
-                        <span>$${totalPaidAmount.toFixed(2)}</span>
+                        <strong>$${totalPaidAmount.toFixed(2)}</strong>
                     </div>
                 </div>
                 
@@ -4641,4 +4950,152 @@ function filterGuestsWithPaidCredits(searchTerm) {
         showToast('Error filtering guests', 'error');
     }
 }
+// Helper function to update the visibility of the "Mark as Paid" button
+function updateMarkPaidButtonVisibility() {
+    const selectedCheckboxes = document.querySelectorAll('.credit-select-checkbox:checked');
+    const markPaidButton = document.getElementById('mark-selected-paid-btn');
+    
+    if (markPaidButton) {
+        if (selectedCheckboxes.length > 0) {
+            markPaidButton.disabled = false;
+        } else {
+            markPaidButton.disabled = true;
+        }
+    }
+}
 
+// Function to mark selected credits as paid
+function markSelectedCreditsPaid() {
+    const selectedCheckboxes = document.querySelectorAll('.credit-select-checkbox:checked');
+    const creditIds = Array.from(selectedCheckboxes).map(checkbox => checkbox.getAttribute('data-id'));
+    
+    if (creditIds.length === 0) {
+        showToast('No credits selected', 'error');
+        return;
+    }
+    
+    showPaymentDateModal(creditIds);
+}
+
+// Function to display the payment date modal
+function showPaymentDateModal(creditIds) {
+    // Create modal for payment date input
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'payment-date-modal';
+    
+    const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+    
+    modal.innerHTML = `
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3>Payment Date</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Please enter the date when these credits were paid:</p>
+                <div class="form-group">
+                    <label for="payment-date">Payment Date:</label>
+                    <input type="date" id="payment-date" value="${today}" required>
+                </div>
+                <div class="form-group">
+                    <label for="payment-note">Note (Optional):</label>
+                    <textarea id="payment-note" placeholder="Add a note for this payment..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="secondary-btn" id="cancel-payment">
+                        Cancel
+                    </button>
+                    <button type="button" class="primary-btn" id="confirm-payment">
+                        Confirm Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    
+    // Add event listeners
+    modal.querySelector('.close-modal').addEventListener('click', () => {
+        modal.style.display = 'none';
+        modal.remove();
+    });
+    
+    document.getElementById('cancel-payment').addEventListener('click', () => {
+        modal.style.display = 'none';
+        modal.remove();
+    });
+    
+    document.getElementById('confirm-payment').addEventListener('click', async () => {
+        const paymentDate = document.getElementById('payment-date').value;
+        const paymentNote = document.getElementById('payment-note').value;
+        
+        if (!paymentDate) {
+            showToast('Please select a payment date', 'error');
+            return;
+        }
+        
+        try {
+            // Show loading state
+            const confirmBtn = document.getElementById('confirm-payment');
+            const originalBtnText = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            confirmBtn.disabled = true;
+            
+            // Make API call to mark credits as paid
+            const response = await fetch(`${API_BASE_URL}/api/credits/mark-paid`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    credit_ids: creditIds,
+                    payment_date: paymentDate,
+                    note: paymentNote
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast('Credits marked as paid successfully', 'success');
+                modal.style.display = 'none';
+                modal.remove();
+                
+                // Refresh the current view to reflect the changes
+                // If we're in the credit management tab, refresh the guest list
+                if (document.querySelector('[data-tab="credit-management"]').classList.contains('active')) {
+                    const currentGuest = document.querySelector('#credit-management-guests-grid .guest-card.selected');
+                    if (currentGuest) {
+                        const guestId = currentGuest.getAttribute('data-id');
+                        // Fetch the guest details again
+                        fetch(`${API_BASE_URL}/api/guests/${guestId}`)
+                            .then(response => response.json())
+                            .then(guest => {
+                                viewGuestCredits(guest);
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing guest credits:', error);
+                                showToast('Error refreshing guest credits', 'error');
+                            });
+                    } else {
+                        // If no guest is selected, just refresh the guest list
+                        loadGuestsForCreditManagement();
+                    }
+                }
+            } else {
+                throw new Error(result.error || 'Failed to mark credits as paid');
+            }
+        } catch (error) {
+            console.error('Error marking credits as paid:', error);
+            showToast(`Error: ${error.message}`, 'error');
+            
+            // Reset button state
+            const confirmBtn = document.getElementById('confirm-payment');
+            confirmBtn.innerHTML = originalBtnText;
+            confirmBtn.disabled = false;
+        }
+    });
+}
